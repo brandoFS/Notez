@@ -1,0 +1,12 @@
+*.iml
+.gradle
+/local.properties
+.idea/
+.DS_Store
+# Matches every module's output, not just the root project's.
+build/
+.kotlin/
+/captures
+.externalNativeBuild
+.cxx
+local.properties

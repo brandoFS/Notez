@@ -1,0 +1,17 @@
+<resources>
+    <string name="notes">Notes</string>
+    <string name="untitled_note">Untitled</string>
+    <string name="new_note">New note</string>
+    <string name="edit_note">Edit note</string>
+    <string name="note_deleted">Note deleted</string>
+    <string name="undo">Undo</string>
+    <string name="empty_notes_title">No notes yet</string>
+    <string name="empty_notes_subtitle">Tap the button below to write your first note.</string>
+    <string name="note_title_hint">Title</string>
+    <string name="note_content_hint">Start writing…</string>
+
+    <string name="cd_add_note">Create a new note</string>
+    <string name="cd_delete_note">Delete note</string>
+    <string name="cd_navigate_back">Go back</string>
+    <string name="cd_save_note">Save note</string>
+</resources>

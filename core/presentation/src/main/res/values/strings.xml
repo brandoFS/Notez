@@ -1,0 +1,5 @@
+<resources>
+    <string name="error_disk_full">Not enough storage space to save changes.</string>
+    <string name="error_not_found">We couldn\'t find that note.</string>
+    <string name="error_unknown">Something went wrong. Please try again.</string>
+</resources>

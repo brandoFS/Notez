@@ -1,0 +1,4 @@
+<resources>
+    <!-- Launch theme only. All real theming is done in Compose via NotezTheme. -->
+    <style name="Theme.NotezApp" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>
