@@ -7,11 +7,15 @@
     <string name="undo">Undo</string>
     <string name="empty_notes_title">No notes yet</string>
     <string name="empty_notes_subtitle">Tap the button below to write your first note.</string>
+    <string name="search_notes">Search notes</string>
+    <string name="no_results_title">No matches</string>
+    <string name="no_results_subtitle">Nothing found for “%1$s”.</string>
     <string name="note_title_hint">Title</string>
     <string name="note_content_hint">Start writing…</string>
 
     <string name="cd_add_note">Create a new note</string>
     <string name="cd_delete_note">Delete note</string>
+    <string name="cd_clear_search">Clear search</string>
     <string name="cd_navigate_back">Go back</string>
     <string name="cd_save_note">Save note</string>
 </resources>

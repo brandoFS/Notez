@@ -7,8 +7,16 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface NoteDao {
-    @Query("SELECT * FROM notes ORDER BY updatedAt DESC")
-    fun observeNotes(): Flow<List<NoteEntity>>
+    @Query(
+        """
+        SELECT * FROM notes
+        WHERE :query = ''
+           OR title LIKE '%' || :query || '%'
+           OR content LIKE '%' || :query || '%'
+        ORDER BY updatedAt DESC
+        """
+    )
+    fun observeNotes(query: String): Flow<List<NoteEntity>>
 
     @Query("SELECT * FROM notes WHERE id = :id")
     suspend fun getNoteById(id: String): NoteEntity?

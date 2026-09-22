@@ -14,8 +14,8 @@ class RoomNoteDataSource(
     private val noteDao: NoteDao
 ) : NoteLocalDataSource {
 
-    override fun getNotes(): Flow<List<Note>> =
-        noteDao.observeNotes().map { entities -> entities.map { it.toNote() } }
+    override fun getNotes(query: String): Flow<List<Note>> =
+        noteDao.observeNotes(query).map { entities -> entities.map { it.toNote() } }
 
     override suspend fun getNoteById(id: String): Result<Note, DataError.Local> {
         return try {

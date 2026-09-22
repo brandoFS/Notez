@@ -5,5 +5,6 @@ import androidx.compose.runtime.Stable
 @Stable
 data class NoteListState(
     val notes: List<NoteUi> = emptyList(),
-    val isLoading: Boolean = true
+    val isLoading: Boolean = true,
+    val searchQuery: String = ""
 )

@@ -3,6 +3,7 @@ package com.example.notezapp.notes.presentation.editor
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -99,7 +100,10 @@ fun NoteEditorScreen(
                 }
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        // The keyboard is nearly always up on this screen, so the snackbar has to clear it.
+        snackbarHost = {
+            SnackbarHost(snackbarHostState, modifier = Modifier.imePadding())
+        }
     ) { innerPadding ->
         Column(
             modifier = Modifier

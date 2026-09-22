@@ -95,6 +95,88 @@ class NoteListViewModelTest {
     }
 
     @Test
+    fun `a query matching a title narrows the list`() = runTest {
+        dataSource.upsertNote(note("1", title = "Groceries"))
+        dataSource.upsertNote(note("2", title = "Standup notes"))
+        val viewModel = NoteListViewModel(dataSource)
+
+        viewModel.onAction(NoteListAction.OnSearchQueryChange("groc"))
+
+        assertThat(viewModel.state.value.notes).hasSize(1)
+        assertThat(viewModel.state.value.notes.first().id).isEqualTo("1")
+    }
+
+    @Test
+    fun `a query matching only body content still matches`() = runTest {
+        dataSource.upsertNote(note("1", title = "Groceries", content = "oat milk"))
+        dataSource.upsertNote(note("2", title = "Standup", content = "nav refactor"))
+        val viewModel = NoteListViewModel(dataSource)
+
+        viewModel.onAction(NoteListAction.OnSearchQueryChange("refactor"))
+
+        assertThat(viewModel.state.value.notes).hasSize(1)
+        assertThat(viewModel.state.value.notes.first().id).isEqualTo("2")
+    }
+
+    @Test
+    fun `a non-matching query yields an empty list`() = runTest {
+        dataSource.upsertNote(note("1", title = "Groceries"))
+        val viewModel = NoteListViewModel(dataSource)
+
+        viewModel.onAction(NoteListAction.OnSearchQueryChange("zzzz"))
+
+        assertThat(viewModel.state.value.notes).isEmpty()
+    }
+
+    @Test
+    fun `clearing the query restores the full list`() = runTest {
+        dataSource.upsertNote(note("1", title = "Groceries"))
+        dataSource.upsertNote(note("2", title = "Standup notes"))
+        val viewModel = NoteListViewModel(dataSource)
+
+        viewModel.onAction(NoteListAction.OnSearchQueryChange("groc"))
+        assertThat(viewModel.state.value.notes).hasSize(1)
+
+        viewModel.onAction(NoteListAction.OnClearSearch)
+
+        assertThat(viewModel.state.value.notes).hasSize(2)
+        assertThat(viewModel.state.value.searchQuery).isEqualTo("")
+    }
+
+    @Test
+    fun `the query is reflected in state`() = runTest {
+        val viewModel = NoteListViewModel(dataSource)
+
+        viewModel.onAction(NoteListAction.OnSearchQueryChange("groc"))
+
+        assertThat(viewModel.state.value.searchQuery).isEqualTo("groc")
+    }
+
+    @Test
+    fun `an active filter still reflects a deletion`() = runTest {
+        dataSource.upsertNote(note("1", title = "Groceries"))
+        dataSource.upsertNote(note("2", title = "Groceries backup"))
+        val viewModel = NoteListViewModel(dataSource)
+        viewModel.onAction(NoteListAction.OnSearchQueryChange("groc"))
+        assertThat(viewModel.state.value.notes).hasSize(2)
+
+        viewModel.onAction(NoteListAction.OnDeleteNote("1"))
+
+        assertThat(viewModel.state.value.notes).hasSize(1)
+        assertThat(viewModel.state.value.notes.first().id).isEqualTo("2")
+    }
+
+    @Test
+    fun `deleting a note that no longer exists reports the error`() = runTest {
+        val viewModel = NoteListViewModel(dataSource)
+
+        viewModel.events.test {
+            viewModel.onAction(NoteListAction.OnDeleteNote("does-not-exist"))
+            assertThat(awaitItem()).isInstanceOf(NoteListEvent.ShowSnackbar::class)
+        }
+    }
+
+    @Test
     fun `a failing delete surfaces an error snackbar and keeps the note`() = runTest {
         dataSource.upsertNote(note("1"))
         val viewModel = NoteListViewModel(dataSource)

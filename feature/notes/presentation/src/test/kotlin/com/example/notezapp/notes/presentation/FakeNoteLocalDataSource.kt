@@ -7,6 +7,7 @@ import com.example.notezapp.notes.domain.Note
 import com.example.notezapp.notes.domain.NoteLocalDataSource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 
 class FakeNoteLocalDataSource : NoteLocalDataSource {
@@ -17,7 +18,18 @@ class FakeNoteLocalDataSource : NoteLocalDataSource {
 
     val currentNotes: List<Note> get() = notes.value
 
-    override fun getNotes(): Flow<List<Note>> = notes
+    // Mirrors the Room query's title-or-content, case-insensitive match. Without this the
+    // filtering tests would pass no matter what the ViewModel does.
+    override fun getNotes(query: String): Flow<List<Note>> = notes.map { all ->
+        if (query.isBlank()) {
+            all
+        } else {
+            all.filter {
+                it.title.contains(query, ignoreCase = true) ||
+                    it.content.contains(query, ignoreCase = true)
+            }
+        }
+    }
 
     override suspend fun getNoteById(id: String): Result<Note, DataError.Local> {
         if (shouldReturnError) return Result.Error(DataError.Local.UNKNOWN)

@@ -7,6 +7,7 @@ no backend, account, or sync.
 ## Features
 
 - Create, edit, and delete notes, sorted by most recently updated
+- Search to filter the list as you type, matching title and content
 - Swipe a row left to delete, with an undo snackbar
 - Drafts survive process death via `SavedStateHandle`
 - Light and dark themes
@@ -46,6 +47,11 @@ Errors are returned, never thrown, as a typed `Result<D, E>`. The data layer cat
 SQLite exceptions and maps them to `DataError.Local`; the presentation layer maps those to
 localized strings via `UiText`.
 
+Search filters in SQL rather than in memory: `NoteLocalDataSource.getNotes(query)` reaches
+a Room query matching title or content, and the ViewModel `flatMapLatest`s over the search
+text so each change re-subscribes to a fresh `Flow`. A blank query matches everything, so
+one code path serves both the filtered and unfiltered list.
+
 ## Tech stack
 
 | Concern | Choice |
@@ -69,30 +75,6 @@ Targets `compileSdk` 37 / `minSdk` 24, on AGP 9.3.3 and Kotlin 2.4.20.
 ./gradlew testDebugUnitTest          # unit tests (JUnit 5)
 ./gradlew connectedDebugAndroidTest  # Compose UI tests — needs a device/emulator
 ```
-
-Android Studio supplies its own JDK, so building from the IDE needs no setup.
-
-### One-time CLI setup
-
-Gradle needs `JAVA_HOME` pointing at a JDK 25, matching the toolchain declared in
-`gradle/gradle-daemon-jvm.properties`. macOS ships a `/usr/bin/java` stub that is not a
-real JDK, so if nothing is configured the build fails with:
-
-```
-Unable to locate a Java Runtime.
-```
-
-Android Studio's bundled JetBrains Runtime is a JDK 25 and works. Add it to your shell
-profile:
-
-```bash
-export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
-export PATH="$JAVA_HOME/bin:$PATH"
-```
-
-On zsh, `~/.zshrc` covers interactive terminals. Put it in `~/.zshenv` instead if
-non-interactive shells — CI scripts, editor tasks, agent tooling — also need it. Verify
-with `java -version`.
 
 ## Gradle notes
 

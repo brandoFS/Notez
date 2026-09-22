@@ -8,17 +8,22 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -26,16 +31,20 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxDefaults
+import androidx.compose.material3.SwipeToDismissBoxState
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -51,6 +60,10 @@ import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
 const val EmptyNotesTestTag = "empty_notes"
+const val NoResultsTestTag = "no_results"
+const val SearchFieldTestTag = "search_field"
+
+fun noteRowTestTag(noteId: String) = "note_row_$noteId"
 
 @Composable
 fun NoteListRoot(
@@ -102,7 +115,11 @@ fun NoteListScreen(
         topBar = {
             TopAppBar(title = { Text(text = stringResource(R.string.notes)) })
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        // imePadding keeps the undo snackbar above the keyboard — without it, deleting
+        // while the search field has focus hides the snackbar and undo is unreachable.
+        snackbarHost = {
+            SnackbarHost(snackbarHostState, modifier = Modifier.imePadding())
+        },
         floatingActionButton = {
             FloatingActionButton(onClick = { onAction(NoteListAction.OnAddNoteClick) }) {
                 Icon(
@@ -112,35 +129,104 @@ fun NoteListScreen(
             }
         }
     ) { innerPadding ->
-        when {
-            state.isLoading -> Box(
-                modifier = Modifier.fillMaxSize().padding(innerPadding),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
+        Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+            // A search box above "No notes yet" is just noise, so hide it until there is
+            // something to search — or until a query has already narrowed things to zero.
+            val hasSomethingToSearch = state.notes.isNotEmpty() || state.searchQuery.isNotBlank()
+            if (!state.isLoading && hasSomethingToSearch) {
+                SearchField(
+                    query = state.searchQuery,
+                    onQueryChange = { onAction(NoteListAction.OnSearchQueryChange(it)) },
+                    onClear = { onAction(NoteListAction.OnClearSearch) }
+                )
             }
 
-            state.notes.isEmpty() -> EmptyNotes(
-                modifier = Modifier.fillMaxSize().padding(innerPadding)
-            )
+            when {
+                state.isLoading -> Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
 
-            else -> LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    top = innerPadding.calculateTopPadding(),
-                    bottom = innerPadding.calculateBottomPadding() + 88.dp
-                )
-            ) {
-                items(items = state.notes, key = { it.id }) { note ->
-                    SwipeableNoteRow(
-                        note = note,
-                        onClick = { onAction(NoteListAction.OnNoteClick(note.id)) },
-                        onDelete = { onAction(NoteListAction.OnDeleteNote(note.id)) }
-                    )
-                    HorizontalDivider()
+                state.notes.isEmpty() && state.searchQuery.isBlank() ->
+                    EmptyNotes(modifier = Modifier.fillMaxSize())
+
+                state.notes.isEmpty() ->
+                    NoSearchResults(query = state.searchQuery, modifier = Modifier.fillMaxSize())
+
+                else -> LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 88.dp)
+                ) {
+                    items(items = state.notes, key = { it.id }) { note ->
+                        SwipeableNoteRow(
+                            note = note,
+                            onClick = { onAction(NoteListAction.OnNoteClick(note.id)) },
+                            onDelete = { onAction(NoteListAction.OnDeleteNote(note.id)) }
+                        )
+                        HorizontalDivider()
+                    }
                 }
             }
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SearchField(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onClear: () -> Unit
+) {
+    TextField(
+        value = query,
+        onValueChange = onQueryChange,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .testTag(SearchFieldTestTag),
+        placeholder = { Text(text = stringResource(R.string.search_notes)) },
+        leadingIcon = {
+            Icon(imageVector = Icons.Default.Search, contentDescription = null)
+        },
+        trailingIcon = {
+            if (query.isNotEmpty()) {
+                IconButton(onClick = onClear) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = stringResource(R.string.cd_clear_search)
+                    )
+                }
+            }
+        },
+        singleLine = true,
+        shape = RoundedCornerShape(28.dp),
+        colors = TextFieldDefaults.colors(
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent,
+            disabledIndicatorColor = Color.Transparent
+        )
+    )
+}
+
+@Composable
+private fun NoSearchResults(query: String, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier.testTag(NoResultsTestTag).padding(32.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = stringResource(R.string.no_results_title),
+            style = MaterialTheme.typography.titleLarge
+        )
+        Text(
+            text = stringResource(R.string.no_results_subtitle, query),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
@@ -151,21 +237,25 @@ private fun SwipeableNoteRow(
     onClick: () -> Unit,
     onDelete: () -> Unit
 ) {
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = { value ->
-            if (value == SwipeToDismissBoxValue.EndToStart) {
-                onDelete()
-                true
-            } else {
-                false
-            }
-        }
-    )
+    val positionalThreshold = SwipeToDismissBoxDefaults.positionalThreshold
+    // Deliberately `remember`, not `rememberSwipeToDismissBoxState` — that one saves through
+    // LazyColumn's per-key saveable holder, which outlives the item. A note brought back by
+    // undo reappears under the same key and would restore as already-dismissed: drawn off
+    // screen, and settled in a dismissed direction, which fires the delete again. A partial
+    // swipe isn't worth persisting, so a fresh state per appearance is the right trade.
+    val dismissState = remember {
+        SwipeToDismissBoxState(SwipeToDismissBoxValue.Settled, positionalThreshold)
+    }
 
     SwipeToDismissBox(
         state = dismissState,
+        // Fires once, when the row settles as dismissed. The `confirmValueChange` this
+        // replaced is a predicate the gesture layer calls speculatively — several times per
+        // swipe — so deleting from it deleted the note more than once.
+        onDismiss = { onDelete() },
         enableDismissFromStartToEnd = false,
-        backgroundContent = { DeleteBackground() }
+        backgroundContent = { DeleteBackground() },
+        modifier = Modifier.testTag(noteRowTestTag(note.id))
     ) {
         NoteRow(note = note, onClick = onClick)
     }
@@ -275,5 +365,16 @@ private fun NoteListScreenPreview() {
 private fun NoteListScreenEmptyPreview() {
     NotezTheme {
         NoteListScreen(state = NoteListState(isLoading = false), onAction = {})
+    }
+}
+
+@Preview
+@Composable
+private fun NoteListScreenNoResultsPreview() {
+    NotezTheme {
+        NoteListScreen(
+            state = NoteListState(isLoading = false, searchQuery = "quarterly"),
+            onAction = {}
+        )
     }
 }

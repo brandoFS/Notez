@@ -9,15 +9,18 @@ import com.example.notezapp.core.presentation.toUiText
 import com.example.notezapp.notes.domain.Note
 import com.example.notezapp.notes.domain.NoteLocalDataSource
 import com.example.notezapp.notes.presentation.R
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class NoteListViewModel(
     private val noteLocalDataSource: NoteLocalDataSource
 ) : ViewModel() {
@@ -30,8 +33,13 @@ class NoteListViewModel(
 
     private var recentlyDeletedNote: Note? = null
 
+    // Drives the Room query. Kept separate from state.searchQuery, which the text field
+    // renders, so that re-querying can't feed back into itself.
+    private val searchQuery = MutableStateFlow("")
+
     init {
-        noteLocalDataSource.getNotes()
+        searchQuery
+            .flatMapLatest { query -> noteLocalDataSource.getNotes(query) }
             .onEach { notes ->
                 _state.update { state ->
                     state.copy(
@@ -56,7 +64,16 @@ class NoteListViewModel(
             is NoteListAction.OnDeleteNote -> deleteNote(action.noteId)
 
             NoteListAction.OnUndoDelete -> undoDelete()
+
+            is NoteListAction.OnSearchQueryChange -> setSearchQuery(action.query)
+
+            NoteListAction.OnClearSearch -> setSearchQuery("")
         }
+    }
+
+    private fun setSearchQuery(query: String) {
+        searchQuery.value = query
+        _state.update { it.copy(searchQuery = query) }
     }
 
     private fun deleteNote(noteId: String) {
