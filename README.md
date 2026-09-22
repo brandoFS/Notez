@@ -63,22 +63,36 @@ Targets `compileSdk` 37 / `minSdk` 24, on AGP 9.3.3 and Kotlin 2.4.20.
 
 ## Building
 
-There is no `java` on `PATH` on the development machine, so Gradle needs `JAVA_HOME`
-pointed at a JDK 25 — Android Studio's bundled JBR works and matches the toolchain
-declared in `gradle/gradle-daemon-jvm.properties`:
-
 ```bash
-export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
-```
-
-```bash
-./gradlew assembleDebug          # build
-./gradlew installDebug           # build and install on a running device/emulator
-./gradlew testDebugUnitTest      # unit tests (JUnit 5)
+./gradlew assembleDebug              # build
+./gradlew installDebug               # build and install on a running device/emulator
+./gradlew testDebugUnitTest          # unit tests (JUnit 5)
 ./gradlew connectedDebugAndroidTest  # Compose UI tests — needs a device/emulator
 ```
 
-Android Studio handles `JAVA_HOME` itself; the export is only needed for the CLI.
+Android Studio supplies its own JDK, so building from the IDE needs no setup.
+
+### One-time CLI setup
+
+Gradle needs `JAVA_HOME` pointing at a JDK 25, matching the toolchain declared in
+`gradle/gradle-daemon-jvm.properties`. macOS ships a `/usr/bin/java` stub that is not a
+real JDK, so if nothing is configured the build fails with:
+
+```
+Unable to locate a Java Runtime.
+```
+
+Android Studio's bundled JetBrains Runtime is a JDK 25 and works. Add it to your shell
+profile:
+
+```bash
+export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
+export PATH="$JAVA_HOME/bin:$PATH"
+```
+
+On zsh, `~/.zshrc` covers interactive terminals. Put it in `~/.zshenv` instead if
+non-interactive shells — CI scripts, editor tasks, agent tooling — also need it. Verify
+with `java -version`.
 
 ## Gradle notes
 
