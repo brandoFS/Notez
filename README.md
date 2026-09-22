@@ -4,6 +4,19 @@ A small two-screen note-taking app for Android, built with Jetpack Compose: a li
 notes and a combined create/edit screen. Notes are stored locally with Room — there is
 no backend, account, or sync.
 
+## Screenshots
+
+| Notes list | Search | Note editor |
+|:---:|:---:|:---:|
+| ![The note list, showing four notes with title, preview and date](docs/screenshots/notes-list.png) | ![Searching for "room", matching a note by its body text](docs/screenshots/search.png) | ![Editing a note's title and body](docs/screenshots/editor.png) |
+
+| Swipe to delete, with undo | Dark theme |
+|:---:|:---:|
+| ![A "Note deleted" snackbar with an Undo action](docs/screenshots/undo-delete.png) | ![The note list in the dark colour scheme](docs/screenshots/dark-theme.png) |
+
+Search matches title *and* body — the query above finds "Standup notes" through the word
+"Room" in its content, not its title.
+
 ## Features
 
 - Create, edit, and delete notes, sorted by most recently updated
